@@ -1,11 +1,11 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-
 const app = express();
+
 app.use(cors());
 
-// --- আপনার Google Drive API Key এখানে বসান ---
+// আপনার API Key টি এখানে দিন
 const API_KEY = 'AIzaSyCfCvc7jayg-hRnhF-bFu1cJ1-m7BR2cX4'; 
 
 app.get('/video/:fileId', async (req, res) => {
@@ -14,40 +14,38 @@ app.get('/video/:fileId', async (req, res) => {
 
     try {
         const range = req.headers.range;
-        
-        const axiosConfig = {
+
+        const response = await axios({
             method: 'get',
             url: driveUrl,
             responseType: 'stream',
-            headers: {}
-        };
+            headers: {
+                // ব্রাউজারের Range রিকোয়েস্ট হুবহু গুগলের কাছে পাঠানো
+                Range: range || 'bytes=0-'
+            }
+        });
 
-        if (range) {
-            axiosConfig.headers['Range'] = range;
-        }
-
-        const response = await axios(axiosConfig);
-
-        // হেডারগুলো সেট করা যাতে ArtPlayer সহজে স্ট্রিমিং করতে পারে
+        // ড্রাইভ থেকে পাওয়া হেডারগুলো সেট করা
+        res.status(response.status); // ২১৬ (Partial Content) হলে তাই পাঠাবে
         res.set({
             'Content-Type': 'video/mp4',
             'Accept-Ranges': 'bytes',
-            'Access-Control-Allow-Origin': '*',
             'Content-Length': response.headers['content-length'],
             'Content-Range': response.headers['content-range'] || '',
+            'Access-Control-Allow-Origin': '*',
         });
-
-        if (range && response.status === 206) {
-            res.status(206); // Partial Content for seeking
-        }
 
         response.data.pipe(res);
 
     } catch (error) {
-        console.error("Streaming Error:", error.message);
-        res.status(500).send("Video could not be loaded.");
+        // যদি ড্রাইভ থেকে কোনো এরর আসে (যেমন ৪৮৩ বা ৫০৩)
+        console.error("G-Drive Error:", error.response ? error.response.status : error.message);
+        res.status(error.response ? error.response.status : 500).json({
+            error: "Streaming Failed",
+            details: error.message
+        });
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Proxy Server running on port ${PORT}`));
