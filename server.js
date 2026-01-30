@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 
 // --- আপনার Google Drive API Key এখানে বসান ---
-const API_KEY = 'YOUR_GOOGLE_DRIVE_API_KEY'; 
+const API_KEY = 'AIzaSyCfCvc7jayg-hRnhF-bFu1cJ1-m7BR2cX4'; 
 
 app.get('/video/:fileId', async (req, res) => {
     const fileId = req.params.fileId;
